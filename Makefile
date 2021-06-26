@@ -14,7 +14,7 @@ processDeltaRHistograms: processDeltaRHistograms.o
 	g++ -o bin/processDeltaRHistograms obj/processDeltaRHistograms.o -L$(TMCPPUTILS)/generalUtils/lib -ltmGeneralUtils -L$(TMCPPUTILS)/ROOTUtils/lib -ltmROOTUtils `root-config --ldflags --glibs` -lTreePlayer -lRooFit -lRooFitCore -lMinuit -lMathCore -lMathMore
 
 processDeltaRHistograms.o: processDeltaRHistograms.cc processDeltaRHistograms.h
-	g++ -g -c -std=c++11 -Wall -Wextra -Werror -pedantic-errors -fPIC -O3 -o obj/processDeltaRHistograms.o src/processDeltaRHistograms.cc -I$(TMCPPUTILS)/generalUtils/include -I$(TMCPPUTILS)/ROOTUtils/include `root-config --cflags`
+	g++ -g -c -Wall -Wextra -Werror -pedantic-errors -fPIC -O3 -o obj/processDeltaRHistograms.o src/processDeltaRHistograms.cc -I$(TMCPPUTILS)/generalUtils/include -I$(TMCPPUTILS)/ROOTUtils/include `root-config --cflags`
 
 clean:
 	rm -rf bin/*
