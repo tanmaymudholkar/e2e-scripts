@@ -18,9 +18,6 @@ script_name = settings.values_["pi0"]["script_name"]
 template_directory = "{ecb}/{r}".format(ecb=e2e_env.e2e_cmssw_base, r=settings.values_["pi0"]["template_directory_relative_to_CMSSW_base"])
 mass_points = settings.values_["pi0"]["mass_points"]
 
-# Make sure all tarballs are up to date
-e2e_common.update_and_upload_e2e_tarballs()
-
 # Make condor folder if it doesn't exist
 subprocess.check_call("mkdir -p {cd}".format(cd=condor_directory), executable="/bin/bash", shell=True)
 
@@ -32,6 +29,9 @@ for mass_point_title in mass_points:
     mass = mass_points[mass_point_title]
     create_cfg_command = "cd {td} && sed \"s|FixedMass = cms.double(FIXEDMASS)|FixedMass = cms.double({m:.3f})|\" pi0_back_to_back_template_cfg.py > pi0_back_to_back_{mpt}_cfg.py 2>&1".format(m=mass, td=template_directory, mpt=mass_point_title)
     subprocess.check_call(create_cfg_command, executable="/bin/bash", shell=True)
+
+# Make sure all tarballs are up to date
+e2e_common.update_and_upload_e2e_tarballs()
 
 # Second pass to submit jobs
 for mass_point_title in mass_points:
