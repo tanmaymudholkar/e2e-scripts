@@ -12,11 +12,10 @@ inputArguments = inputArgumentsParser.parse_args()
 
 settings = e2e_settings.Settings("settings.json")
 
-condor_directory = "{cA}/{d}".format(cA=e2e_env.condor_work_area_root, d=settings.values_["pi0"]["condor_directory_name"])
-script_directory = settings.values_["pi0"]["script_directory"]
-script_name = settings.values_["pi0"]["script_name"]
-template_directory = "{ecb}/{r}".format(ecb=e2e_env.e2e_cmssw_base, r=settings.values_["pi0"]["template_directory_relative_to_CMSSW_base"])
-mass_points = settings.values_["pi0"]["mass_points"]
+condor_directory = "{cA}/e2e_pi0_generation".format(cA=e2e_env.condor_work_area_root)
+script_directory = "sh_condor_wrappers"
+script_name = "generate_pi0.sh"
+mass_points = settings.values_["generate_pi0"]["mass_points"]
 
 # Make condor folder if it doesn't exist
 subprocess.check_call("mkdir -p {cd}".format(cd=condor_directory), executable="/bin/bash", shell=True)
@@ -24,27 +23,22 @@ subprocess.check_call("mkdir -p {cd}".format(cd=condor_directory), executable="/
 # Copy script over to condor folder
 subprocess.check_call("cp -u {sd}/{sn} {cd}/.".format(sd=script_directory, sn=script_name, cd=condor_directory), executable="/bin/bash", shell=True)
 
-# First pass to create all new needed cfgs
-for mass_point_title in mass_points:
-    mass = mass_points[mass_point_title]
-    create_cfg_command = "cd {td} && sed \"s|FixedMass = cms.double(FIXEDMASS)|FixedMass = cms.double({m:.3f})|\" pi0_back_to_back_template_cfg.py > pi0_back_to_back_{mpt}_cfg.py 2>&1".format(m=mass, td=template_directory, mpt=mass_point_title)
-    subprocess.check_call(create_cfg_command, executable="/bin/bash", shell=True)
-
 # Make sure all tarballs are up to date
 e2e_common.update_and_upload_e2e_tarballs()
 
-# Second pass to submit jobs
+# Create and submit jobs
 for mass_point_title in mass_points:
     mass = mass_points[mass_point_title]
-    for copy_index in range(settings.values_["pi0"]["nCopiesPerMassPoint"]):
+    for copy_index in range(settings.values_["generate_pi0"]["nCopiesPerMassPoint"]):
         processIdentifier = "generate_pi0_{t}_copy{i}".format(t=mass_point_title, i=copy_index)
         filesToTransfer = [e2e_env.x509Proxy, "{er}/sh_snippets/setup_environment_remote.sh".format(er=e2e_env.e2e_root)]
         jdlInterface = tmJDLInterface.tmJDLInterface(processName=processIdentifier, scriptPath=script_name, outputDirectoryRelativePath=condor_directory)
         jdlInterface.addFilesToTransferFromList(filesToTransfer)
-        jdlInterface.addScriptArgument("pi0_back_to_back_{mpt}_cfg.py".format(mpt=mass_point_title)) # Argument 1: name of cfg
-        jdlInterface.addScriptArgument(str(settings.values_["pi0"]["nEvtsPerJob"])) # Argument 2: nEvts
-        jdlInterface.addScriptArgument("copy{i}".format(i=copy_index)) # Argument 3: identifier
-        jdlInterface.addScriptArgument("{ep}/{eer}/genAOD/pi0".format(ep=e2e_env.eos_prefix, eer=e2e_env.e2e_eos_root)) # Argument 4: output EOS directory with prefix for xrdcp
+        jdlInterface.addScriptArgument(str(settings.values_["generate_pi0"]["nEvtsPerJob"])) # Argument 1: nEvts
+        jdlInterface.addScriptArgument("{mpt}_copy{i}".format(mpt=mass_point_title, i=copy_index)) # Argument 2: identifier
+        jdlInterface.addScriptArgument("{ep}/{eer}/genAOD/pi0".format(ep=e2e_env.eos_prefix, eer=e2e_env.e2e_eos_root)) # Argument 3: output EOS directory with prefix for xrdcp
+        jdlInterface.addScriptArgument("{m:.4f}".format(m=mass)) # Argument 4: mass
+        jdlInterface.addScriptArgument("{s}".format(s=(12345+copy_index))) # Argument 5: random number generator seed
         if (e2e_env.habitat == "lxplus"):
             jdlInterface.setFlavor("tomorrow")
         # # Write JDL

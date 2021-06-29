@@ -12,10 +12,10 @@ inputArguments = inputArgumentsParser.parse_args()
 
 settings = e2e_settings.Settings("settings.json")
 
-condor_directory = "{cA}/{d}".format(cA=e2e_env.condor_work_area_root, d=settings.values_["pi0_minimal_analyzer"]["condor_directory_name"])
-script_directory = settings.values_["pi0_minimal_analyzer"]["script_directory"]
-script_name = settings.values_["pi0_minimal_analyzer"]["script_name"]
-mass_points = settings.values_["pi0"]["mass_points"]
+condor_directory = "{cA}/e2e_pi0_minimal_analysis".format(cA=e2e_env.condor_work_area_root)
+script_directory = "sh_condor_wrappers"
+script_name = "run_minimal_analyzer_pi0.sh"
+mass_points = settings.values_["generate_pi0"]["mass_points"]
 
 # Make condor folder if it doesn't exist
 subprocess.check_call("mkdir -p {cd}".format(cd=condor_directory), executable="/bin/bash", shell=True)
@@ -29,12 +29,12 @@ e2e_common.update_and_upload_e2e_tarballs()
 # Submit jobs
 for mass_point_title in mass_points:
     mass = mass_points[mass_point_title]
-    for copy_index in range(settings.values_["pi0"]["nCopiesPerMassPoint"]):
+    for copy_index in range(settings.values_["generate_pi0"]["nCopiesPerMassPoint"]):
         processIdentifier = "run_minimal_analyzer_pi0_{t}_copy{i}".format(t=mass_point_title, i=copy_index)
         filesToTransfer = [e2e_env.x509Proxy, "{er}/sh_snippets/setup_environment_remote.sh".format(er=e2e_env.e2e_root)]
         jdlInterface = tmJDLInterface.tmJDLInterface(processName=processIdentifier, scriptPath=script_name, outputDirectoryRelativePath=condor_directory)
         jdlInterface.addFilesToTransferFromList(filesToTransfer)
-        jdlInterface.addScriptArgument("{ep}/{eer}/genAOD/pi0/pi0_back_to_back_{mpt}_cfg_py_GEN_SIM_DIGI_L1_DIGI2RAW_HLT_RAW2DIGI_L1Reco_RECO_copy{i}.root".format(ep=e2e_env.eos_prefix, eer=e2e_env.e2e_eos_root, mpt=mass_point_title, i=copy_index)) # Argument 1: input path
+        jdlInterface.addScriptArgument("{ep}/{eer}/genAOD/pi0/pi0_back_to_back_cfg_py_GEN_SIM_DIGI_L1_DIGI2RAW_HLT_RAW2DIGI_L1Reco_RECO_{mpt}_copy{i}.root".format(ep=e2e_env.eos_prefix, eer=e2e_env.e2e_eos_root, mpt=mass_point_title, i=copy_index)) # Argument 1: input path
         jdlInterface.addScriptArgument("{ep}/{eer}/pi0_analysis/minimal".format(ep=e2e_env.eos_prefix, eer=e2e_env.e2e_eos_root)) # Argument 2: output EOS directory with prefix for xrdcp
         jdlInterface.addScriptArgument("{mpt}_copy{i}".format(mpt=mass_point_title, i=copy_index)) # Argument 3: output ID
         if (e2e_env.habitat == "lxplus"):
