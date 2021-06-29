@@ -21,7 +21,7 @@ int main(int argc, char* argv[]) {
   TH1::AddDirectory(kFALSE);
 
   tmArgumentParser argumentParser = tmArgumentParser("Process deltaR histograms.");
-  argumentParser.addArgument("inputFilePath", "", true, "Path to file with deltaR histograms.");
+  argumentParser.addArgument("inputFilePaths", "", true, "Path to file with deltaR histograms.");
   argumentParser.addArgument("outputFolder", "plots", false, "Output folder.");
   argumentParser.addArgument("outputFileName", "", true, "Name of output file.");
   argumentParser.setPassedStringValues(argc, argv);
@@ -37,24 +37,33 @@ int main(int argc, char* argv[]) {
   double resolution_EE = get_resolution_in_dR(29., 3170.);
   double resolution_ES = get_resolution_in_dR(2., 3045.);
 
-  TFile *inputFileHandle = TFile::Open(options.inputFilePath.c_str(), "READ");
-  if ((inputFileHandle->IsZombie()) || (!(inputFileHandle->IsOpen()))) {
-    std::cout << "ERROR: Unable to open file: " << options.inputFilePath << std::endl;
-    std::exit(EXIT_FAILURE);
+  std::cout << "Adding histogram from file: " << (options.inputFilePaths).at(0) << std::endl;
+  TFile *inputFileHandle_first_file = TFile::Open(((options.inputFilePaths).at(0)).c_str(), "READ");
+  assert((!(inputFileHandle_first_file->IsZombie())) && (inputFileHandle_first_file->IsOpen()));
+  TH1D *deltaRHistogram_first_file;
+  inputFileHandle_first_file->GetObject("genLevelMinimalAnalyzer/deltaR", deltaRHistogram_first_file);
+  assert (deltaRHistogram_first_file != nullptr);
+  TH1D *deltaRHistogram = (TH1D*)(deltaRHistogram_first_file->Clone());
+  inputFileHandle_first_file->Close();
+  for (unsigned int inputFilePathsCounter = 1; inputFilePathsCounter < (options.inputFilePaths).size(); ++inputFilePathsCounter) {
+    std::cout << "Adding histogram from file: " << (options.inputFilePaths).at(inputFilePathsCounter) << std::endl;
+    TFile *inputFileHandle_new = TFile::Open(((options.inputFilePaths).at(inputFilePathsCounter)).c_str(), "READ");
+    assert((!(inputFileHandle_new->IsZombie())) && (inputFileHandle_new->IsOpen()));
+    TH1D *deltaRHistogram_new;
+    inputFileHandle_new->GetObject("genLevelMinimalAnalyzer/deltaR", deltaRHistogram_new);
+    assert (deltaRHistogram_new != nullptr);
+    deltaRHistogram->Add(deltaRHistogram_new);
+    inputFileHandle_new->Close();
   }
 
-  TH1D *inputHistogram;
-  inputFileHandle->GetObject("genLevelMinimalAnalyzer/deltaR", inputHistogram);
-  assert (inputHistogram != nullptr);
   TCanvas outputCanvas("deltaR", "deltaR", 1600, 900);
   gStyle->SetOptStat(110010);
-  inputHistogram->Draw();
+  deltaRHistogram->Draw();
   outputCanvas.Update();
   draw_vertical_line(resolution_ES, static_cast<EColor>(kRed+2), "ES granularity");
   draw_vertical_line(resolution_EE, static_cast<EColor>(kGreen+3), "EE granularity");
   outputCanvas.Update();
   outputCanvas.SaveAs((options.outputFolder + "/" + options.outputFileName).c_str());
-  inputFileHandle->Close();
 
   std::cout << "All done!" << std::endl;
   return EXIT_SUCCESS;

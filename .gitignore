@@ -7,3 +7,4 @@
 docker_stderror
 settings.json
 temp/*
+cpp_options_interface/*
