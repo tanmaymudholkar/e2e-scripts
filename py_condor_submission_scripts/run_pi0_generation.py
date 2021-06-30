@@ -6,7 +6,7 @@ import os, sys, subprocess, argparse
 import tmJDLInterface
 import e2e_env, e2e_common, e2e_settings
 
-inputArgumentsParser = argparse.ArgumentParser(description='Submit generation jobs for various mass points.')
+inputArgumentsParser = argparse.ArgumentParser(description='Submit generation jobs for pi0 at various mass points.')
 inputArgumentsParser.add_argument('--isProductionRun', action='store_true', help="By default, this script does not submit the actual jobs and instead only prints the shell command that would have been called. Passing this switch will execute the commands.")
 inputArguments = inputArgumentsParser.parse_args()
 
