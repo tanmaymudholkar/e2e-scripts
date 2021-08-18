@@ -3,7 +3,7 @@
 from __future__ import print_function, division
 
 import os, sys, subprocess, argparse
-import tmJDLInterface
+import tmJDLInterface, tmEOSUtils
 import e2e_env, e2e_common, e2e_settings
 
 inputArgumentsParser = argparse.ArgumentParser(description='Submit ntuplization jobs for generated AODs.')
@@ -26,14 +26,31 @@ e2e_common.update_and_upload_e2e_tarballs()
 
 settings = e2e_settings.Settings("settings.json")
 
+def get_parent_folder(full_path):
+    return ("/".join(full_path.split("/")[:-1]))
+
 # First gamma
-for copy_index in range(settings.values_["generate_gamma"]["nCopies"]):
-    processIdentifier = "run_ntuplization_gamma_copy{i}".format(i=copy_index)
+
+# Build list of input folders
+input_eos_paths_without_prefix_gamma = None
+genAOD_path_generator_gamma = tmEOSUtils.generate_list_of_files_in_eos_path(eos_path="{r}/genAOD/gamma/gamma/crab_generation_gamma".format(r=e2e_env.e2e_eos_root), appendPrefix=False)
+for eos_candidate_path in genAOD_path_generator_gamma:
+    parent_folder = get_parent_folder(eos_candidate_path)
+    if (input_eos_paths_without_prefix_gamma is None):
+        input_eos_paths_without_prefix_gamma = parent_folder
+    else:
+        if (parent_folder != input_eos_paths_without_prefix_gamma):
+            sys.exit("ERROR in finding input folder paths: two candidates found for pattern \"gamma\". Previous guess: {pg}, current file path: {cfp}, current guess: {cg}".format(pg=input_eos_paths_without_prefix_gamma, cfp=eos_candidate_path, cg=parent_folder))
+if (input_eos_paths_without_prefix_gamma is None):
+    sys.exit("ERROR: no ROOT files found at path {p}".format(p="{r}/genAOD/gamma/gamma/crab_generation_gamma".format(r=e2e_env.e2e_eos_root)))
+
+for clone_index in range(1, 1+settings.values_["generate_gamma"]["nCopies"]):
+    processIdentifier = "run_ntuplization_gamma_{i}".format(i=clone_index)
     jdlInterface = tmJDLInterface.tmJDLInterface(processName=processIdentifier, scriptPath=script_name, outputDirectoryRelativePath=condor_directory)
     jdlInterface.addFilesToTransferFromList(filesToTransfer)
-    jdlInterface.addScriptArgument("{ep}/{eer}/genAOD/gamma/gamma_back_to_back_cfg_py_GEN_SIM_DIGI_L1_DIGI2RAW_HLT_RAW2DIGI_L1Reco_RECO_copy{i}.root".format(ep=e2e_env.eos_prefix, eer=e2e_env.e2e_eos_root, i=copy_index)) # Argument 1: input path
+    jdlInterface.addScriptArgument("{p}/{ip}/gamma_back_to_back_cfg_py_GEN_SIM_DIGI_L1_DIGI2RAW_HLT_RAW2DIGI_L1Reco_RECO_{i}.root".format(p=e2e_env.eos_prefix, ip=input_eos_paths_without_prefix_gamma, i=clone_index)) # Argument 1: input path
     jdlInterface.addScriptArgument("{ep}/{eer}/genAOD_ntuples/gamma".format(ep=e2e_env.eos_prefix, eer=e2e_env.e2e_eos_root)) # Argument 2: output EOS directory with prefix for xrdcp
-    jdlInterface.addScriptArgument("copy{i}".format(i=copy_index)) # Argument 3: output ID
+    jdlInterface.addScriptArgument("{i}".format(i=clone_index)) # Argument 3: output ID
     if (e2e_env.habitat == "lxplus"):
         jdlInterface.setFlavor("tomorrow")
     # # Write JDL
@@ -47,16 +64,32 @@ for copy_index in range(settings.values_["generate_gamma"]["nCopies"]):
         print(submissionCommand)
 
 # Now pi0
+
 mass_points = settings.values_["generate_pi0"]["mass_points"]
+# Build list of input folders
+input_eos_paths_without_prefix_pi0 = {}
+for mass_point_title in mass_points:
+    genAOD_path_generator_pi0 = tmEOSUtils.generate_list_of_files_in_eos_path(eos_path="{r}/genAOD/pi0/pi0/crab_generation_pi0_{t}".format(r=e2e_env.e2e_eos_root, t=mass_point_title), appendPrefix=False)
+    input_eos_paths_without_prefix_pi0[mass_point_title] = None
+    for eos_candidate_path in genAOD_path_generator_pi0:
+        parent_folder = get_parent_folder(eos_candidate_path)
+        if (input_eos_paths_without_prefix_pi0[mass_point_title] is None):
+            input_eos_paths_without_prefix_pi0[mass_point_title] = parent_folder
+        else:
+            if (parent_folder != input_eos_paths_without_prefix_pi0[mass_point_title]):
+                sys.exit("ERROR in finding input folder paths: two candidates found for pattern \"pi0\". Previous guess: {pg}, current file path: {cfp}, current guess: {cg}".format(pg=input_eos_paths_without_prefix_pi0[mass_point_title], cfp=eos_candidate_path, cg=parent_folder))
+    if (input_eos_paths_without_prefix_pi0[mass_point_title] is None):
+        sys.exit("ERROR: no ROOT files found at path {p}".format(p="{r}/genAOD/pi0/pi0/crab_generation_pi0_{t}".format(r=e2e_env.e2e_eos_root, t=mass_point_title)))
+
 for mass_point_title in mass_points:
     mass = mass_points[mass_point_title]
-    for copy_index in range(settings.values_["generate_pi0"]["nCopiesPerMassPoint"]):
-        processIdentifier = "run_ntuplization_pi0_{t}_copy{i}".format(t=mass_point_title, i=copy_index)
+    for clone_index in range(1, 1+settings.values_["generate_pi0"]["nCopiesPerMassPoint"]):
+        processIdentifier = "run_ntuplization_pi0_{t}_{i}".format(t=mass_point_title, i=clone_index)
         jdlInterface = tmJDLInterface.tmJDLInterface(processName=processIdentifier, scriptPath=script_name, outputDirectoryRelativePath=condor_directory)
         jdlInterface.addFilesToTransferFromList(filesToTransfer)
-        jdlInterface.addScriptArgument("{ep}/{eer}/genAOD/pi0/pi0_back_to_back_cfg_py_GEN_SIM_DIGI_L1_DIGI2RAW_HLT_RAW2DIGI_L1Reco_RECO_{mpt}_copy{i}.root".format(ep=e2e_env.eos_prefix, eer=e2e_env.e2e_eos_root, mpt=mass_point_title, i=copy_index)) # Argument 1: input path
+        jdlInterface.addScriptArgument("{p}/{ip}/pi0_back_to_back_cfg_py_GEN_SIM_DIGI_L1_DIGI2RAW_HLT_RAW2DIGI_L1Reco_RECO_{i}.root".format(p=e2e_env.eos_prefix, ip=input_eos_paths_without_prefix_pi0[mass_point_title], i=clone_index)) # Argument 1: input path
         jdlInterface.addScriptArgument("{ep}/{eer}/genAOD_ntuples/pi0".format(ep=e2e_env.eos_prefix, eer=e2e_env.e2e_eos_root)) # Argument 2: output EOS directory with prefix for xrdcp
-        jdlInterface.addScriptArgument("{mpt}_copy{i}".format(mpt=mass_point_title, i=copy_index)) # Argument 3: output ID
+        jdlInterface.addScriptArgument("{mpt}_{i}".format(mpt=mass_point_title, i=clone_index)) # Argument 3: output ID
         if (e2e_env.habitat == "lxplus"):
             jdlInterface.setFlavor("tomorrow")
         # # Write JDL

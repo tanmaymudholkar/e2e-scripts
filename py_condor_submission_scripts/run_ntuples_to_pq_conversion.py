@@ -28,13 +28,13 @@ settings = e2e_settings.Settings("settings.json")
 
 # Need to fix gamma first
 # # First gamma
-# for copy_index in range(settings.values_["generate_gamma"]["nCopies"]):
-#     processIdentifier = "run_ntuplization_gamma_copy{i}".format(i=copy_index)
+# for clone_index in range(1, 1+settings.values_["generate_gamma"]["nCopies"]):
+#     processIdentifier = "run_ntuplization_gamma_{i}".format(i=clone_index)
 #     jdlInterface = tmJDLInterface.tmJDLInterface(processName=processIdentifier, scriptPath=script_name, outputDirectoryRelativePath=condor_directory)
 #     jdlInterface.addFilesToTransferFromList(filesToTransfer)
-#     jdlInterface.addScriptArgument("{ep}/{eer}/genAOD/gamma/gamma_back_to_back_cfg_py_GEN_SIM_DIGI_L1_DIGI2RAW_HLT_RAW2DIGI_L1Reco_RECO_copy{i}.root".format(ep=e2e_env.eos_prefix, eer=e2e_env.e2e_eos_root, i=copy_index)) # Argument 1: input path
+#     jdlInterface.addScriptArgument("{ep}/{eer}/genAOD/gamma/gamma_back_to_back_cfg_py_GEN_SIM_DIGI_L1_DIGI2RAW_HLT_RAW2DIGI_L1Reco_RECO_{i}.root".format(ep=e2e_env.eos_prefix, eer=e2e_env.e2e_eos_root, i=clone_index)) # Argument 1: input path
 #     jdlInterface.addScriptArgument("{ep}/{eer}/genAOD_ntuples/gamma".format(ep=e2e_env.eos_prefix, eer=e2e_env.e2e_eos_root)) # Argument 2: output EOS directory with prefix for xrdcp
-#     jdlInterface.addScriptArgument("copy{i}".format(i=copy_index)) # Argument 3: output ID
+#     jdlInterface.addScriptArgument("{i}".format(i=clone_index)) # Argument 3: output ID
 #     if (e2e_env.habitat == "lxplus"):
 #         jdlInterface.setFlavor("tomorrow")
 #     # # Write JDL
@@ -51,13 +51,13 @@ settings = e2e_settings.Settings("settings.json")
 mass_points = settings.values_["generate_pi0"]["mass_points"]
 for mass_point_title in mass_points:
     mass = mass_points[mass_point_title]
-    for copy_index in range(settings.values_["generate_pi0"]["nCopiesPerMassPoint"]):
-        processIdentifier = "run_ntuples_to_pq_conversion_pi0_{t}_copy{i}".format(t=mass_point_title, i=copy_index)
+    for clone_index in range(1, 1+settings.values_["generate_pi0"]["nCopiesPerMassPoint"]):
+        processIdentifier = "run_ntuples_to_pq_conversion_pi0_{t}_{i}".format(t=mass_point_title, i=clone_index)
         jdlInterface = tmJDLInterface.tmJDLInterface(processName=processIdentifier, scriptPath=script_name, outputDirectoryRelativePath=condor_directory)
         jdlInterface.addFilesToTransferFromList(filesToTransfer)
-        jdlInterface.addScriptArgument("{ep}/{eer}/genAOD_ntuples/pi0/ntuples_{mpt}_copy{i}.root".format(ep=e2e_env.eos_prefix, eer=e2e_env.e2e_eos_root, mpt=mass_point_title, i=copy_index)) # Argument 1: input path
+        jdlInterface.addScriptArgument("{ep}/{eer}/genAOD_ntuples/pi0/ntuples_{mpt}_{i}.root".format(ep=e2e_env.eos_prefix, eer=e2e_env.e2e_eos_root, mpt=mass_point_title, i=clone_index)) # Argument 1: input path
         jdlInterface.addScriptArgument("{ep}/{eer}/genAOD_pq/pi0".format(ep=e2e_env.eos_prefix, eer=e2e_env.e2e_eos_root)) # Argument 2: output EOS directory with prefix for xrdcp
-        jdlInterface.addScriptArgument("{mpt}_copy{i}".format(mpt=mass_point_title, i=copy_index)) # Argument 3: output ID
+        jdlInterface.addScriptArgument("{mpt}_{i}".format(mpt=mass_point_title, i=clone_index)) # Argument 3: output ID
         if (e2e_env.habitat == "lxplus"):
             jdlInterface.setFlavor("tomorrow")
         # # Write JDL

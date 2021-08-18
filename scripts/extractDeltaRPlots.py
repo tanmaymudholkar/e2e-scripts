@@ -24,8 +24,8 @@ for mass_point_title in mass_points:
     # Create file with list of input paths
     inputFilePaths_deltaR_minimalAnalyzer_path = "cpp_options_interface/inputFilePaths_deltaR_minimalAnalyzer_{mpt}.dat".format(mpt=mass_point_title)
     inputFilePaths_deltaR_minimalAnalyzer_handler = open(inputFilePaths_deltaR_minimalAnalyzer_path, 'w')
-    for copy_index in range(settings.values_["generate_pi0"]["nCopiesPerMassPoint"]):
-        inputFilePaths_deltaR_minimalAnalyzer_handler.write("{ep}/{eer}/pi0_analysis/minimal/histograms_{mpt}_copy{i}.root\n".format(ep=e2e_env.eos_prefix, eer=e2e_env.e2e_eos_root, mpt=mass_point_title, i=copy_index))
+    for clone_index in range(1, 1+settings.values_["generate_pi0"]["nCopiesPerMassPoint"]):
+        inputFilePaths_deltaR_minimalAnalyzer_handler.write("{ep}/{eer}/pi0_analysis/minimal/histograms_{mpt}_{i}.root\n".format(ep=e2e_env.eos_prefix, eer=e2e_env.e2e_eos_root, mpt=mass_point_title, i=clone_index))
     inputFilePaths_deltaR_minimalAnalyzer_handler.close()
     extract_command = "./bin/processDeltaRHistograms inputFilePaths={p} outputFolder={f} outputFileName=deltaR_{mpt}.pdf".format(p=inputFilePaths_deltaR_minimalAnalyzer_path, f=inputArguments.outputFolder, mpt=mass_point_title)
     subprocess.check_call(extract_command, executable="/bin/bash", shell=True)
