@@ -29,6 +29,9 @@ inputArgumentsParser.add_argument('--outputFolder', required=True, help="Path to
 inputArgumentsParser.add_argument('--outputFileName', required=True, help="Name of output file.")
 inputArguments = inputArgumentsParser.parse_args()
 
+CRYSTAL_SIZE = 2.862
+MOLIERE_RADIUS = 2.19
+
 # settings = e2e_settings.Settings("settings.json")
 
 # mass_points = settings.values_["generate_pi0"]["mass_points"]
@@ -151,32 +154,108 @@ def plot_ES_composite(img, ax, vmin=1.e-5, vmax=None, cmap='gist_heat_r', alpha=
     #plt.show()
     #plt.close()
 
+def plot_EE_composite(img, ax, vmin=1.e-5, vmax=None, cmap='gist_heat_r', alpha=1., colorbar=False, dolog=False):
+    # Only plots single channel, single sample images
+    img = img.squeeze()
+    #img[img < 1.e-3] = 0.
+    assert len(img.shape) == 2
+
+    vmax_ = img.max() if vmax is None else vmax
+    vmax_ = 1. if vmax_ == 0. else vmax_
+
+    #fig, ax = plt.subplots()
+    if dolog:
+        im = ax.imshow(img, vmin=vmin, vmax=vmax_, cmap=cmap, alpha=alpha, origin='lower', norm=LogNorm())
+    else:
+        im = ax.imshow(img, vmin=vmin, vmax=vmax_, cmap=cmap, alpha=alpha, origin='lower')
+    #ax.figure.colorbar(im, ax=ax, fraction=0.0228, pad=0.015, label='Energy [GeV]')
+    if colorbar:
+        ax.figure.colorbar(im, ax=ax, fraction=0.0469, pad=0.015, label='Energy [GeV]')
+
+    # #'''
+    # # By default, imshow() places tick marks at center of image pixel, 
+    # # so need to shift to the low side by 0.5 to match DQM convention
+    # # of ticks being placed on low edge of bin
+    # off = 0.5
+    off = 0 # I've never liked the DQM convention -- TKM
+
+    # if img.shape[0] == 1280:
+    #     tick_range = np.arange(0,img.shape[0]+128,128)
+    #     # Set image coordinates where ticks should appear...
+    #     ax.set_xticks(tick_range-off)
+    #     ax.set_yticks(tick_range-off)
+    #     # then set what values should be displayed at these coordinates
+    #     ax.set_xticklabels(tick_range)
+    #     ax.set_yticklabels(tick_range)
+    # el
+    if img.shape[0] % 32 == 0.:
+        n_ticks = img.shape[0]//32
+        tick_range = np.arange(0,img.shape[0]+32,32)
+        # Set image coordinates where ticks should appear...
+        ax.set_xticks(tick_range-off)
+        ax.set_yticks(tick_range-off)
+        # then set what values should be displayed at these coordinates
+        ax.set_xticklabels(tick_range)
+        ax.set_yticklabels(tick_range)
+    #'''
+
+    # Make ticks face inward
+    ax.xaxis.set_tick_params(direction='in', which='major', length=6.)
+    ax.xaxis.set_tick_params(direction='in', which='minor', length=3.)
+    ax.yaxis.set_tick_params(direction='in', which='major', length=6.)
+    ax.yaxis.set_tick_params(direction='in', which='minor', length=3.)
+
+def plot_circle(ax, coordinates_center, radius, color):
+    circle_object = plt.Circle(coordinates_center, radius, edgecolor=color, facecolor=None, linestyle="dotted", fill=False)
+    ax.add_patch(circle_object)
+
 # In[6]:
 # Read sample iSample from parquet file
 iSample = 0
-X = pq_in.read_row_group(iSample, columns=['X_cms']).to_pydict() # python dict
+X = pq_in.read_row_group(iSample, columns=['X_cms', 'X_ee', 'crystal_maxE_X', 'crystal_maxE_Y', 'SC_daughter1_projEE_X', 'SC_daughter1_projEE_Y', 'SC_daughter2_projEE_X', 'SC_daughter2_projEE_Y']).to_pydict() # python dict
 
 # Convert to numpy array
-Xcms = np.float32(X['X_cms']).squeeze() # multi-channel ES-granularity image array
-print(Xcms.shape)
+# Xcms = np.float32(X['X_cms']).squeeze() # multi-channel ES-granularity image array
+# print(Xcms.shape)
 
-# img channel indices
-idx_ESX = 0
-idx_ESY = 1
-idx_EE  = 2
+Xee = np.float32(X['X_ee']).squeeze() # EE image array
+print("Xee shape: " + str(Xee.shape))
+
+daughter1_projEE = (float(X['SC_daughter1_projEE_X'][0]), float(X['SC_daughter1_projEE_Y'][0]))
+daughter2_projEE = (float(X['SC_daughter2_projEE_X'][0]), float(X['SC_daughter2_projEE_Y'][0]))
+shower_max = (float(X['crystal_maxE_X'][0]), float(X['crystal_maxE_Y'][0]))
+daughter1_projEE_img_coordinates = (8.0 + (daughter1_projEE[0] - shower_max[0])/CRYSTAL_SIZE, 8.0 + (daughter1_projEE[1] - shower_max[1])/CRYSTAL_SIZE)
+daughter2_projEE_img_coordinates = (8.0 + (daughter2_projEE[0] - shower_max[0])/CRYSTAL_SIZE, 8.0 + (daughter2_projEE[1] - shower_max[1])/CRYSTAL_SIZE)
+
+# # img channel indices
+# idx_ESX = 0
+# idx_ESY = 1
+# idx_EE  = 2
 
 # Make composite plot
+
+# fig, ax = plt.subplots()
+# # EE
+# plot_ES_composite(Xcms[idx_EE], ax, cmap='Greys', alpha=0.8, dolog=True)
+# # ESX + ESY
+# plot_ES_composite(Xcms[idx_ESX]+Xcms[idx_ESY], ax, cmap='jet',alpha=0.7, dolog=True)
+# plt.xlabel('strip X')
+# plt.ylabel('strip Y')
+# plt.xlabel(r"$\mathrm{strip_{X}}'$", size=24)
+# plt.ylabel(r"$\mathrm{strip_{Y}}'$", size=24)
+# plt.savefig("{o}/{ofn}".format(o=inputArguments.outputFolder, ofn=inputArguments.outputFileName))
+
 fig, ax = plt.subplots()
 # EE
-plot_ES_composite(Xcms[idx_EE], ax, cmap='Greys', alpha=0.8, dolog=True)
+plot_EE_composite(Xee, ax, cmap='Greys', alpha=0.8, dolog=True)
+# plt.plot(8, 8, marker='o', markersize=10, alpha=0.5, color='r')
+plot_circle(ax, daughter1_projEE_img_coordinates, MOLIERE_RADIUS/CRYSTAL_SIZE, "red")
+plot_circle(ax, daughter2_projEE_img_coordinates, MOLIERE_RADIUS/CRYSTAL_SIZE, "blue")
 # ESX + ESY
-plot_ES_composite(Xcms[idx_ESX]+Xcms[idx_ESY], ax, cmap='jet',alpha=0.7, dolog=True)
-plt.xlabel('strip X')
-plt.ylabel('strip Y')
-plt.xlabel(r"$\mathrm{strip_{X}}'$", size=24)
-plt.ylabel(r"$\mathrm{strip_{Y}}'$", size=24)
+# plot_EE_composite(Xcms[idx_ESX]+Xcms[idx_ESY], ax, cmap='jet',alpha=0.7, dolog=True)
+plt.xlabel('X')
+plt.ylabel('Y')
 plt.savefig("{o}/{ofn}".format(o=inputArguments.outputFolder, ofn=inputArguments.outputFileName))
-
 
 # # In[7]:
 # # Make histogram of hit intensities for each channel
