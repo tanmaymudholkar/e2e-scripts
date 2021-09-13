@@ -20,7 +20,7 @@ import matplotlib.pyplot as plt
 from matplotlib.colors import LogNorm
 # get_ipython().run_line_magic('matplotlib', 'inline')
 
-import os, sys, subprocess, argparse
+import os, sys, subprocess, argparse, math
 # import e2e_env, e2e_common, e2e_settings
 
 inputArgumentsParser = argparse.ArgumentParser(description='Create 2D plot of event rechit energy in the endcap/preshower region for the first event in a given parquet file.')
@@ -209,10 +209,16 @@ def plot_circle(ax, coordinates_center, radius, color):
     circle_object = plt.Circle(coordinates_center, radius, edgecolor=color, facecolor=None, linestyle="dotted", fill=False)
     ax.add_patch(circle_object)
 
+def plot_marker(marker_coordinates, color):
+    marker_object = plt.plot(marker_coordinates[0], marker_coordinates[1], marker='x', markersize=10, markeredgewidth=2, color=color)
+
+def plot_pT_label(ax, coordinates, pT, color):
+    ax.text(coordinates[0], coordinates[1], "{pT:.1f} GeV".format(pT=pT), color=color, horizontalalignment="center", verticalalignment="center")
+
 # In[6]:
 # Read sample iSample from parquet file
 iSample = 0
-X = pq_in.read_row_group(iSample, columns=['X_cms', 'X_ee', 'crystal_maxE_X', 'crystal_maxE_Y', 'SC_daughter1_projEE_X', 'SC_daughter1_projEE_Y', 'SC_daughter2_projEE_X', 'SC_daughter2_projEE_Y']).to_pydict() # python dict
+X = pq_in.read_row_group(iSample, columns=['X_cms', 'X_ee', 'crystal_maxE_X', 'crystal_maxE_Y', 'SC_daughter1_projEE', 'SC_daughter1_pT', 'SC_daughter2_projEE', 'SC_daughter2_pT', 'A_projEE', 'A_pT']).to_pydict() # python dict
 
 # Convert to numpy array
 # Xcms = np.float32(X['X_cms']).squeeze() # multi-channel ES-granularity image array
@@ -221,11 +227,26 @@ X = pq_in.read_row_group(iSample, columns=['X_cms', 'X_ee', 'crystal_maxE_X', 'c
 Xee = np.float32(X['X_ee']).squeeze() # EE image array
 print("Xee shape: " + str(Xee.shape))
 
-daughter1_projEE = (float(X['SC_daughter1_projEE_X'][0]), float(X['SC_daughter1_projEE_Y'][0]))
-daughter2_projEE = (float(X['SC_daughter2_projEE_X'][0]), float(X['SC_daughter2_projEE_Y'][0]))
+daughter1_projEE = (float(X['SC_daughter1_projEE'][0][0]), float(X['SC_daughter1_projEE'][0][1]))
+daughter1_pT = float(X['SC_daughter1_pT'][0])
+daughter2_projEE = (float(X['SC_daughter2_projEE'][0][0]), float(X['SC_daughter2_projEE'][0][1]))
+daughter2_pT = float(X['SC_daughter2_pT'][0])
+A_projEE = (float(X['A_projEE'][0][0]), float(X['A_projEE'][0][1]))
+A_pT = float(X['A_pT'][0])
 shower_max = (float(X['crystal_maxE_X'][0]), float(X['crystal_maxE_Y'][0]))
 daughter1_projEE_img_coordinates = (8.0 + (daughter1_projEE[0] - shower_max[0])/CRYSTAL_SIZE, 8.0 + (daughter1_projEE[1] - shower_max[1])/CRYSTAL_SIZE)
 daughter2_projEE_img_coordinates = (8.0 + (daughter2_projEE[0] - shower_max[0])/CRYSTAL_SIZE, 8.0 + (daughter2_projEE[1] - shower_max[1])/CRYSTAL_SIZE)
+A_projEE_img_coordinates         = (8.0 + (        A_projEE[0] - shower_max[0])/CRYSTAL_SIZE, 8.0 +         (A_projEE[1] - shower_max[1])/CRYSTAL_SIZE)
+
+daughter1_to_2_vector = ((daughter2_projEE_img_coordinates[0] - daughter1_projEE_img_coordinates[0]), (daughter2_projEE_img_coordinates[1] - daughter1_projEE_img_coordinates[1]))
+daughter1_to_2_magnitude = math.sqrt(math.pow(daughter1_to_2_vector[0], 2.0) + math.pow(daughter1_to_2_vector[1], 2.0))
+daughter1_to_2_unit_vector = (daughter1_to_2_vector[0]/daughter1_to_2_magnitude, daughter1_to_2_vector[1]/daughter1_to_2_magnitude)
+daughter1_label_img_coordinates = (daughter1_projEE_img_coordinates[0] - (1.75*MOLIERE_RADIUS/CRYSTAL_SIZE)*(daughter1_to_2_unit_vector[0]), daughter1_projEE_img_coordinates[1] - (1.75*MOLIERE_RADIUS/CRYSTAL_SIZE)*(daughter1_to_2_unit_vector[1]))
+daughter2_label_img_coordinates = (daughter2_projEE_img_coordinates[0] + (1.75*MOLIERE_RADIUS/CRYSTAL_SIZE)*(daughter1_to_2_unit_vector[0]), daughter2_projEE_img_coordinates[1] + (1.75*MOLIERE_RADIUS/CRYSTAL_SIZE)*(daughter1_to_2_unit_vector[1]))
+A_label_img_coordinates = [A_projEE_img_coordinates[0], A_projEE_img_coordinates[1] + 0.75]
+
+# A_p4 = X['A_projEE']
+# print("Type of A_p4: {t}".format(t=str(type(A_p4))))
 
 # # img channel indices
 # idx_ESX = 0
@@ -250,7 +271,11 @@ fig, ax = plt.subplots()
 plot_EE_composite(Xee, ax, cmap='Greys', alpha=0.8, dolog=True)
 # plt.plot(8, 8, marker='o', markersize=10, alpha=0.5, color='r')
 plot_circle(ax, daughter1_projEE_img_coordinates, MOLIERE_RADIUS/CRYSTAL_SIZE, "red")
-plot_circle(ax, daughter2_projEE_img_coordinates, MOLIERE_RADIUS/CRYSTAL_SIZE, "blue")
+plot_pT_label(ax, daughter1_label_img_coordinates, daughter1_pT, "red")
+plot_circle(ax, daughter2_projEE_img_coordinates, MOLIERE_RADIUS/CRYSTAL_SIZE, "red")
+plot_pT_label(ax, daughter2_label_img_coordinates, daughter2_pT, "red")
+plot_marker(A_projEE_img_coordinates, "blue")
+plot_pT_label(ax, A_label_img_coordinates, A_pT, "blue")
 # ESX + ESY
 # plot_EE_composite(Xcms[idx_ESX]+Xcms[idx_ESY], ax, cmap='jet',alpha=0.7, dolog=True)
 plt.xlabel('X')
