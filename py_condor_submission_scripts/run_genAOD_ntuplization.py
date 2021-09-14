@@ -51,6 +51,7 @@ for clone_index in range(1, 1+settings.values_["generate_gamma"]["nCopies"]):
     jdlInterface.addScriptArgument("{p}/{ip}/gamma_back_to_back_cfg_py_GEN_SIM_DIGI_L1_DIGI2RAW_HLT_RAW2DIGI_L1Reco_RECO_{i}.root".format(p=e2e_env.eos_prefix, ip=input_eos_paths_without_prefix_gamma, i=clone_index)) # Argument 1: input path
     jdlInterface.addScriptArgument("{ep}/{eer}/genAOD_ntuples/gamma".format(ep=e2e_env.eos_prefix, eer=e2e_env.e2e_eos_root)) # Argument 2: output EOS directory with prefix for xrdcp
     jdlInterface.addScriptArgument("{i}".format(i=clone_index)) # Argument 3: output ID
+    jdlInterface.addScriptArgument("gamma") # Argument 4: selection type
     if (e2e_env.habitat == "lxplus"):
         jdlInterface.setFlavor("tomorrow")
     # # Write JDL
@@ -90,6 +91,7 @@ for mass_point_title in mass_points:
         jdlInterface.addScriptArgument("{p}/{ip}/pi0_back_to_back_cfg_py_GEN_SIM_DIGI_L1_DIGI2RAW_HLT_RAW2DIGI_L1Reco_RECO_{i}.root".format(p=e2e_env.eos_prefix, ip=input_eos_paths_without_prefix_pi0[mass_point_title], i=clone_index)) # Argument 1: input path
         jdlInterface.addScriptArgument("{ep}/{eer}/genAOD_ntuples/pi0".format(ep=e2e_env.eos_prefix, eer=e2e_env.e2e_eos_root)) # Argument 2: output EOS directory with prefix for xrdcp
         jdlInterface.addScriptArgument("{mpt}_{i}".format(mpt=mass_point_title, i=clone_index)) # Argument 3: output ID
+        jdlInterface.addScriptArgument("pi0") # Argument 4: selection type
         if (e2e_env.habitat == "lxplus"):
             jdlInterface.setFlavor("tomorrow")
         # # Write JDL
